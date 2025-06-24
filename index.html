@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memória da História</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 1. FONTE NOVA: Importei a fonte 'Tinos' do Google Fonts, que é muito parecida com a Times New Roman -->
+    <link href="https://fonts.googleapis.com/css2?family=Tinos:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados para o jogo */
+        body {
+            /* 1. FONTE NOVA: Apliquei a fonte 'Tinos' em todo o corpo do jogo */
+            font-family: 'Tinos', serif; 
+            background: linear-gradient(to bottom right, #ffffff, hsl(49, 7%, 67%)); /* Gradiente de fundo mais suave */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Alinha ao topo para melhor visualização */
+            padding: 2rem 1rem;
+            color: #000000;
+        }
+
+        /* Garante que o título e os botões usem a nova fonte com peso negrito */
+        h1, h2, button {
+            font-family: 'Tinos', serif;
+            font-weight: 700;
+        }
+
+        /* --- Lógica da animação de virar a carta --- */
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+        /* Aplica a rotação quando a carta tem a classe 'flipped' */
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* Estilos comuns para a frente e o verso da carta */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1rem;
+            overflow: hidden;
+            /* 4. BORDAS: Bordas finas (border-2) e pouco arredondadas (rounded-md) */
+            border-width: 0.5px;
+            border-radius: 0.5rem; 
+        }
+
+        /* Estilo da parte de trás da carta */
+        .card-back {
+            background-color: #3b82f6; /* Azul */
+            border-color: #60a5fa; /* Borda azul mais clara */
+            color: white;
+            font-size: 3rem;
+        }
+
+        /* Estilo da parte da frente da carta (onde o conteúdo aparece) */
+        .card-front {
+            background-color: #f9fafb; /* Cinza bem claro, quase branco */
+            border-color: #d1d5db; /* Borda cinza clara */
+            color: #1f2937;
+            transform: rotateY(180deg);
+        }
+
+       .card-front img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 0.5rem;
+        }
+        
+        /* 3. CARTAS MAIORES: Aumentei significativamente o tamanho do texto dentro das cartas */
+       .card-text {
+            font-size: 1.25rem; /* Começa maior */
+            line-height: 1.3;
+            user-select: none;
+        }
+        
+        /* Media queries para ajustar o tamanho da fonte em telas maiores */
+        @media (min-width: 768px) {
+           .card-text { font-size: 1.5rem; }
+        }
+        @media (min-width: 1024px) {
+           .card-text { font-size: 1.75rem; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <h1 class="text-5xl md:text-6xl font-extrabold text-blue-800 mb-6 text-center drop-shadow-lg">
+        Memória da História
+    </h1>
+
+    <div id="start-screen" class="text-center">
+        <p class="text-xl mb-8 max-w-2xl">
+            Bem-vindo ao Jogo da Memória da História! Teste seus conhecimentos e aprenda sobre eventos e conceitos históricos importantes. Escolha um nível de dificuldade para começar:
+        </p>
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
+            <button id="easy-btn" class="bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300">
+                Fácil (6 pares)
+            </button>
+            <button id="medium-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white py-3 px-8 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
+                Intermediário (10 pares)
+            </button>
+            <button id="hard-btn" class="bg-red-600 hover:bg-red-700 text-white py-3 px-8 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-300">
+                Difícil (16 pares)
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. LAYOUT: O grid agora ocupa a largura total (w-full) e o fundo branco foi removido -->
+    <div id="game-interface" class="hidden flex flex-col items-center w-full max-w-6xl mx-auto">
+        <div class="text-xl font-semibold mb-4">
+            Movimentos: <span id="moves-count" class="text-blue-700">0</span>
+        </div>
+        <div id="feedback-message" class="text-lg text-gray-600 mb-4 h-6">Encontre os pares!</div>
+
+        <!-- 3. CARTAS MAIORES: O grid tem menos colunas para as cartas ficarem maiores -->
+        <div id="card-grid" class="grid gap-4 w-full">
+            <!-- As cartas serão inseridas aqui pelo JavaScript -->
+        </div>
+
+        <button id="restart-btn" class="mt-8 bg-purple-500 hover:bg-purple-600 text-white py-2 px-6 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300">
+            Mudar Nível / Reiniciar
+        </button>
+    </div>
+
+    <div id="game-over-screen" class="hidden text-center bg-white p-8 rounded-xl shadow-2xl">
+        <h2 class="text-4xl font-extrabold text-green-700 mb-4">Parabéns! Jogo Concluído!</h2>
+        <p id="final-moves" class="text-2xl mb-6">Você fez 0 movimentos para encontrar todos os pares.</p>
+        <p class="text-xl mb-6">
+            Esperamos que você tenha aprendido e se divertido explorando a Memória da História!
+        </p>
+        <button id="play-again-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            Jogar Novamente
+        </button>
+    </div>
+
+    <script>
+        const cardData = [
+            // Seus pares de cartas vão aqui...
+            { id: 1, value: 'feudalismo', content: 'https://static.todamateria.com.br/upload/fe/ud/feudalismoservos-cke.jpg' },
+            { id: 2, value: 'feudalismo', content: 'sistema político, econômico e social que regeu a sociedade da Europa Ocidental durante a Idade Média, ligado as relações de vassalagem e com o feudo.' },
+            { id: 3, value: 'revolucao_francesa', content: 'https://placehold.co/400x400/D97706/FFFFFF?text=Queda+da+Bastilha' },
+            { id: 4, value: 'revolucao_francesa', content: 'Marco inicial da Revolução Francesa, simbolizando o fim do absolutismo.' },
+            { id: 5, value: 'gandhi', content: 'https://placehold.co/400x400/10B981/FFFFFF?text=Gandhi' },
+            { id: 6, value: 'gandhi', content: 'Liderou a independência da Índia através da desobediência civil e não-violência.' },
+            { id: 7, value: 'wwii', content: 'https://placehold.co/400x400/EF4444/FFFFFF?text=Dia+D' },
+            { id: 8, value: 'wwii', content: 'Operação de desembarque dos Aliados na Normandia durante a Segunda Guerra Mundial.' },
+            { id: 9, value: 'imprensa', content: 'https://placehold.co/400x400/3B82F6/FFFFFF?text=Imprensa+de+Gutenberg' },
+            { id: 10, value: 'imprensa', content: 'Invenção que revolucionou a disseminação do conhecimento na Europa.' },
+            { id: 11, value: 'revolucao_industrial', content: 'https://placehold.co/400x400/6B7280/FFFFFF?text=Motor+a+Vapor' },
+            { id: 12, value: 'revolucao_industrial', content: 'Tecnologia chave da Revolução Industrial, transformando a produção e o transporte.' },
+            { id: 13, value: 'sufragistas', content: 'https://placehold.co/400x400/7C3AED/FFFFFF?text=Sufragistas' },
+            { id: 14, value: 'sufragistas', content: 'Movimento de mulheres que lutaram pelo direito ao voto no final do séc. XIX e início do XX.' },
+            { id: 15, value: 'guerra_fria', content: 'https://placehold.co/400x400/F59E0B/FFFFFF?text=Corrida+Espacial' },
+            { id: 16, value: 'guerra_fria', content: 'Disputa tecnológica entre EUA e URSS, um dos principais episódios da Guerra Fria.' },
+            { id: 17, value: 'roma', content: 'https://placehold.co/400x400/991B1B/FFFFFF?text=Coliseu' },
+            { id: 18, value: 'roma', content: 'Anfiteatro icônico, palco de espetáculos e símbolo do poder do Império Romano.' },
+            { id: 19, value: 'maia', content: 'https://placehold.co/400x400/059669/FFFFFF?text=Pirâmide+Maia' },
+            { id: 20, value: 'maia', content: 'Civilização pré-colombiana com avançado conhecimento em astronomia e matemática.' },
+            { id: 21, value: 'rota_seda', content: 'https://placehold.co/400x400/CA8A04/FFFFFF?text=Rota+da+Seda' },
+            { id: 22, value: 'rota_seda', content: 'Rede de rotas comerciais que conectou o Oriente e o Ocidente por séculos.' },
+            { id: 23, value: 'muro_berlim', content: 'https://placehold.co/400x400/4B5563/FFFFFF?text=Queda+do+Muro' },
+            { id: 24, value: 'muro_berlim', content: 'Evento que simbolizou o fim da Guerra Fria e a reunificação da Alemanha.' },
+            { id: 25, value: 'mlk', content: 'https://placehold.co/400x400/1F2937/FFFFFF?text=Martin+Luther+King' },
+            { id: 26, value: 'mlk', content: 'Líder do movimento dos direitos civis nos EUA, conhecido por sua luta pacífica.' },
+            { id: 27, value: 'grande_depressao', content: 'https://placehold.co/400x400/9A3412/FFFFFF?text=Crise+de+1929' },
+            { id: 28, value: 'grande_depressao', content: 'A maior crise econômica do século XX, que afetou o mundo todo.' },
+            { id: 29, value: 'filosofia_grega', content: 'https://placehold.co/400x400/4338CA/FFFFFF?text=Platão+e+Aristóteles' },
+            { id: 30, value: 'filosofia_grega', content: 'Pensadores fundamentais que estabeleceram as bases da filosofia ocidental.' },
+            { id: 31, value: 'renascimento', content: 'https://placehold.co/400x400/BE185D/FFFFFF?text=Mona+Lisa' },
+            { id: 32, value: 'renascimento', content: 'Obra de Leonardo da Vinci, um dos maiores ícones do Renascimento Cultural.' },
+        ];
+
+        let gameCards = [];
+        let flippedCards = [];
+        let matchedCards = [];
+        let moves = 0;
+        let gameStarted = false;
+        let gameOver = false;
+        let level = null;
+        let canClick = true; 
+
+        const startScreen = document.getElementById('start-screen');
+        const gameInterface = document.getElementById('game-interface');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const easyBtn = document.getElementById('easy-btn');
+        const mediumBtn = document.getElementById('medium-btn');
+        const hardBtn = document.getElementById('hard-btn');
+        const movesCount = document.getElementById('moves-count');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const cardGrid = document.getElementById('card-grid');
+        const restartBtn = document.getElementById('restart-btn');
+        const finalMoves = document.getElementById('final-moves');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function updateMovesDisplay() {
+            movesCount.textContent = moves;
+        }
+
+        function updateFeedbackMessage(message) {
+            feedbackMessage.textContent = message;
+        }
+        
+        function initializeGame(selectedLevel) {
+            level = selectedLevel;
+            let numCards;
+            let gridClass;
+
+            // 3. CARTAS MAIORES: A grade agora tem menos colunas para que as cartas fiquem maiores
+            switch (selectedLevel) {
+                case 'easy':
+                    numCards = 12; // 6 pares
+                    gridClass = 'grid-cols-3'; // 3 colunas de cartas
+                    break;
+                case 'medium':
+                    numCards = 20; // 10 pares
+                    gridClass = 'grid-cols-4'; // 4 colunas de cartas
+                    break;
+                case 'hard':
+                    numCards = 32; // 16 pares
+                    gridClass = 'grid-cols-4'; // 4 colunas de cartas (para serem bem grandes)
+                    break;
+                default:
+                    numCards = 12;
+                    gridClass = 'grid-cols-3';
+            }
+            // 2. LAYOUT: O fundo branco foi removido daqui
+            cardGrid.className = `grid ${gridClass} gap-4 w-full`;
+            
+            const selectedCardsData = cardData.slice(0, numCards);
+            
+            gameCards = shuffleArray(selectedCardsData.map(card => ({
+                ...card,
+                isFlipped: false,
+                isMatched: false,
+                uniqueId: `${card.id}-${Math.random()}`
+            })));
+
+            flippedCards = [];
+            matchedCards = [];
+            moves = 0;
+            gameStarted = true;
+            gameOver = false;
+            canClick = true;
+
+            updateMovesDisplay();
+            updateFeedbackMessage('Encontre os pares!');
+            renderCards(); 
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameInterface.classList.remove('hidden');
+        }
+        
+        function renderCards() {
+            cardGrid.innerHTML = '';
+            gameCards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card', 'relative', 'w-full', 'aspect-square', 'cursor-pointer', 'transition-transform', 'duration-300');
+                cardElement.style.perspective = '1000px';
+
+                const cardInner = document.createElement('div');
+                cardInner.classList.add('card-inner');
+
+                if (card.isFlipped || card.isMatched) {
+                    cardElement.classList.add('flipped');
+                }
+                
+                if (card.isMatched) {
+                    cardElement.classList.add('opacity-50', 'scale-95');
+                } else {
+                    cardElement.classList.add('hover:scale-105');
+                }
+
+                cardElement.dataset.id = card.uniqueId;
+                cardElement.dataset.value = card.value;
+                
+                cardInner.innerHTML = `
+                    <div class="card-face card-back">
+                        <span class="select-none">?</span>
+                    </div>
+                    <div class="card-face card-front">
+                        ${card.content.startsWith('http') ?
+                            `<img src="${card.content}" alt="Evento Histórico" class="w-full h-full object-cover rounded-md" onerror="this.onerror=null; this.src='https://placehold.co/400x400/AAAAAA/000000?text=Erro+Imagem';">`
+                            :
+                            `<p class="card-text text-gray-900">${card.content}</p>`
+                        }
+                    </div>
+                `;
+                
+                cardElement.appendChild(cardInner);
+                cardElement.addEventListener('click', () => handleCardClick(card.uniqueId));
+                cardGrid.appendChild(cardElement);
+            });
+        }
+        
+        function handleCardClick(clickedUniqueId) {
+            if (!gameStarted || gameOver || !canClick) return;
+
+            const clickedCardIndex = gameCards.findIndex(card => card.uniqueId === clickedUniqueId);
+            const clickedCard = gameCards[clickedCardIndex];
+
+            if (clickedCard.isMatched || clickedCard.isFlipped || flippedCards.length === 2) {
+                return;
+            }
+
+            gameCards[clickedCardIndex].isFlipped = true;
+            renderCards();
+
+            flippedCards.push(clickedUniqueId);
+
+            if (flippedCards.length === 2) {
+                canClick = false;
+                const [firstCardUniqueId, secondCardUniqueId] = flippedCards;
+                const firstCard = gameCards.find(card => card.uniqueId === firstCardUniqueId);
+                const secondCard = gameCards.find(card => card.uniqueId === secondCardUniqueId);
+
+                moves++;
+                updateMovesDisplay();
+
+                if (firstCard.value === secondCard.value) {
+                    firstCard.isMatched = true;
+                    secondCard.isMatched = true;
+                    matchedCards.push(firstCardUniqueId, secondCardUniqueId);
+                    flippedCards = [];
+                    updateFeedbackMessage('Acerto! Bom trabalho!');
+                    renderCards();
+                    canClick = true;
+
+                    if (matchedCards.length === gameCards.length) {
+                        gameOver = true;
+                        setTimeout(() => {
+                            updateFeedbackMessage('Parabéns! Você encontrou todos os pares!');
+                            finalMoves.textContent = `Você fez ${moves} movimentos para encontrar todos os pares.`;
+                            gameInterface.classList.add('hidden');
+                            gameOverScreen.classList.remove('hidden');
+                        }, 500);
+                    }
+                } else {
+                    updateFeedbackMessage('Quase lá! Tente novamente.');
+                    setTimeout(() => {
+                        firstCard.isFlipped = false;
+                        secondCard.isFlipped = false;
+                        flippedCards = [];
+                        renderCards();
+                        canClick = true;
+                    }, 1200);
+                }
+            }
+        }
+        
+        easyBtn.addEventListener('click', () => initializeGame('easy'));
+        mediumBtn.addEventListener('click', () => initializeGame('medium'));
+        hardBtn.addEventListener('click', () => initializeGame('hard'));
+        restartBtn.addEventListener('click', () => {
+            gameStarted = false;
+            startScreen.classList.remove('hidden');
+            gameInterface.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+        });
+        playAgainBtn.addEventListener('click', () => {
+            gameStarted = false;
+            startScreen.classList.remove('hidden');
+            gameInterface.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+        });
+
+        window.onload = () => {
+            startScreen.classList.remove('hidden');
+            gameInterface.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
